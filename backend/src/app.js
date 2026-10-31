@@ -55,6 +55,26 @@ function repairFilename(value) {
   }
 }
 
+function modelExtension(fileName, framework, fileType) {
+  const extension = path.extname(String(fileName || '')).toLowerCase()
+  if (extension && extension !== '.model') return extension
+  const type = String(fileType || '').toLowerCase()
+  const format = String(framework || '').toLowerCase()
+  if (format.includes('tflite') || type.includes('tflite') || type.includes('tensorflow')) return '.tflite'
+  if (format.includes('onnx') || type.includes('onnx')) return '.onnx'
+  if (format.includes('ncnn')) return '.bin'
+  if (format.includes('pytorch') || format === 'pt') return '.pt'
+  if (format.includes('tensorrt') || format === 'engine') return '.engine'
+  return extension || '.model'
+}
+
+function effectiveModelFilename(fileName, framework, fileType) {
+  const name = repairFilename(fileName || '') || 'model'
+  const extension = path.extname(name)
+  if (extension) return name
+  return name + modelExtension(name, framework, fileType)
+}
+
 function parseTags(value) {
   return [...new Set(String(value || '').split(/[,，\s]+/).map((tag) => tag.trim()).filter(Boolean))].slice(0, 6)
 }
@@ -86,7 +106,7 @@ function modelFromRow(row, favoriteIds = new Set()) {
     authorId: row.authorId,
     authorName: row.authorName,
     status: row.status,
-    fileName: repairFilename(row.fileName),
+    fileName: effectiveModelFilename(row.fileName, row.framework, row.fileType),
     fileSize: row.fileSize,
     fileType: row.fileType,
     sha256: row.sha256,
@@ -272,7 +292,7 @@ export function createApp(config) {
         authorId: req.user.id,
         authorName: req.user.nickname,
         status: 'pending',
-        fileName: repairFilename(req.file.originalname),
+        fileName: effectiveModelFilename(req.file.originalname, req.body.framework, req.file.mimetype),
         fileSize: req.file.size,
         fileType: req.file.mimetype || 'application/octet-stream',
         sha256: await hashFile(req.file.path),
@@ -397,7 +417,7 @@ export function createApp(config) {
     res.setHeader('Content-Type', model.fileType)
     res.setHeader('Content-Length', model.fileSize)
     res.setHeader('X-Model-SHA256', model.sha256)
-    res.download(filePath, model.fileName)
+    res.download(filePath, effectiveModelFilename(row.fileName, row.framework, row.fileType))
   })
 
   app.use((error, _req, res, _next) => {

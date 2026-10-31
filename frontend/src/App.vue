@@ -218,7 +218,7 @@ function resetUploadForm() {
 }
 
 function modelFileName(model) {
-  const rawName = String(model?.fileName || 'model.onnx')
+  const rawName = String(model?.fileName || '')
   // Repair old records whose UTF-8 filename was decoded as Latin-1 by the
   // multipart parser. Correct Unicode names are left unchanged.
   let fileName = rawName
@@ -230,7 +230,24 @@ function modelFileName(model) {
       fileName = rawName
     }
   }
-  return fileName.replace(/[\\/]/g, '_') || 'model.onnx'
+  fileName = fileName.replace(/[\\/]/g, '_') || 'model'
+  if (!/\.[a-z0-9]{2,10}$/i.test(fileName)) {
+    const format = String(model?.framework || '').toLowerCase()
+    const type = String(model?.fileType || '').toLowerCase()
+    const extension = format.includes('tflite') || type.includes('tflite') || type.includes('tensorflow')
+      ? '.tflite'
+      : format.includes('onnx') || type.includes('onnx')
+        ? '.onnx'
+        : format.includes('ncnn')
+          ? '.bin'
+          : format.includes('pytorch') || format === 'pt'
+            ? '.pt'
+            : format.includes('tensorrt') || format === 'engine'
+              ? '.engine'
+              : '.model'
+    fileName += extension
+  }
+  return fileName
 }
 
 async function downloadModel(model) {
