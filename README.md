@@ -38,3 +38,5 @@ pnpm test
 ## APK 发布
 
 APK 使用 GitHub Release 管理，发布时保留版本号、变更说明和 SHA-256。当前仓库只保存源代码和部署配置，避免超过 GitHub 普通 Git 文件大小限制。
+
+安装签名丢失时不能覆盖原包：先卸载旧包，再安装新的迁移版；迁移后版本使用同一新签名链，可通过 `updates/latest.json` 远程更新。
